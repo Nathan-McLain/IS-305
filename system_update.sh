@@ -29,7 +29,7 @@ log_message "Updating Pi-hole..."
 sudo pihole -up | tee -a "$LOG_FILE"
 
 #    - update Gravity, which downloads the latest blocklists.
-log_message "Refreshing Gravity..."F
+log_message "Refreshing Gravity..."
 sudo pihole -g | tee -a "$LOG_FILE"
 log_message "Pi-hole and Gravity update complete!"
 
