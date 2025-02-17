@@ -1,10 +1,18 @@
 #!/bin/bash
 echo "Starting script execution..."
 
-# This script will perform system updates and Pi-hole maintenance automatically.
+# This script will perform system updates and Pi-hole maintenance automatically for my Ras-pi 5.
 
-# 1. Update the Raspberry Pi OS and all installed packages.
-#!/bin/bash
+# 1a. Start file logging
+
+LOG_FILE="$HOME/system_update.log"
+
+log_message() {
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - $1" | sudo tee -a "$LOG_FILE"
+}
+
+# 1b. Update the Raspberry Pi OS and all installed packages.
+
 echo "Updating package lists..."
 sudo apt update
 echo "Upgrading installed packages..."
@@ -13,7 +21,6 @@ echo "Cleaning up..."
 sudo apt autoremove -y
 sudo apt clean
 echo "Update complete!"
-
 
 # 2. Update Pi-hole and refresh Gravity.
 #    - Use `pihole -up` to update Pi-hole to the latest version.
