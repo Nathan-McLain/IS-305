@@ -9,8 +9,8 @@ echo "Starting script execution..."
 LOG_FILE="/var/log/system_update.log"
 
 log_message() {
-    # Echo the message to the terminal and also write it to the log file
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - $1" | tee -a "$LOG_FILE"
+    # Echo the message to the terminal and also write it to the log file with sudo
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - $1" | sudo tee -a "$LOG_FILE"
 }
 
 # 2. Update the Raspberry Pi OS and all installed packages.
