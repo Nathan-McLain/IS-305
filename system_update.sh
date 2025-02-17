@@ -24,10 +24,14 @@ sudo apt clean | tee -a "$LOG_FILE"
 log_message "Update complete!"
 
 # 3. Update Pi-hole and refresh Gravity.
-#    - Use `pihole -up` to update Pi-hole to the latest version.
-#    - Use `pihole -g` to update Gravity, which downloads the latest blocklists.
+#    - update Pi-hole to the latest version.
+log_message "Updating Pi-hole..."
+sudo pihole -up | tee -a "$LOG_FILE"
 
-
+#    - update Gravity, which downloads the latest blocklists.
+log_message "Refreshing Gravity..."F
+sudo pihole -g | tee -a "$LOG_FILE"
+log_message "Pi-hole and Gravity update complete!"
 
 # 4. Schedule the script to run automatically.
 #    - Add it to crontab to execute at a set interval (e.g., weekly).
