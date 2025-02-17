@@ -5,7 +5,7 @@ echo "Starting script execution..."
 
 # 1a. Start file logging
 
-LOG_FILE="$HOME/system_update.log"
+LOG_FILE="/var/log/system_update.log"
 
 log_message() {
     echo "$(date +"%Y-%m-%d %H:%M:%S") - $1" | sudo tee -a "$LOG_FILE"
