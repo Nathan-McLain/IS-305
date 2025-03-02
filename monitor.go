@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // This script will monitor system metrics such as CPU temperature, memory usage, and disk utilization.
@@ -30,31 +31,67 @@ func getCPUTemperature() (string, error) {
 // 2. Monitor CPU usage.
 //    - Extract CPU usage from the `top` command.
 
-// Function to get CPU usage
-func getCPUUsage() (string, error) {
-	cmd := exec.Command("top", "-bn1")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
+// Function to calculate CPU usage over multiple samples
+func getAverageCPUUsage(samples int, interval time.Duration) (string, error) {
+	var totalUsage float64
+
+	for i := 0; i < samples; i++ {
+		idle1, total1 := readCPUSample()
+		time.Sleep(interval) // Wait between samples
+		idle2, total2 := readCPUSample()
+
+		idleDelta := idle2 - idle1
+		totalDelta := total2 - total1
+
+		if totalDelta == 0 {
+			continue
+		}
+
+		// Calculate CPU usage for this sample
+		usage := 100.0 * (1.0 - float64(idleDelta)/float64(totalDelta))
+		totalUsage += usage
 	}
 
-	scanner := bufio.NewScanner(bytes.NewReader(output))
+	// Compute the average CPU usage
+	averageUsage := totalUsage / float64(samples)
+	return fmt.Sprintf("Average CPU Usage (over %d samples): %.2f%%", samples, averageUsage), nil
+}
+
+// Reads CPU stats from /proc/stat
+func readCPUSample() (idle, total int64) {
+	file, err := os.Open("/proc/stat")
+	if err != nil {
+		return 0, 0
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.Contains(line, "Cpu(s): ") {
-			// Example output: "%Cpu(s):  0.0 us,  0.0 sy,  0.0 ni,100.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st"
-			fields := strings.Fields(line)
-
-			// Extract user (%) and system (%) CPU usage
-			userUsage, _ := strconv.ParseFloat(strings.TrimSuffix(fields[1], "us,"), 64)
-			systemUsage, _ := strconv.ParseFloat(strings.TrimSuffix(fields[3], "sy,"), 64)
-
-			totalUsage := userUsage + systemUsage
-			return fmt.Sprintf("CPU Usage: %.2f%%", totalUsage), nil
+		fields := strings.Fields(scanner.Text())
+		if fields[0] == "cpu" {
+			var values []int64
+			for _, field := range fields[1:] {
+				val, _ := strconv.ParseInt(field, 10, 64)
+				values = append(values, val)
+			}
+			// Total CPU time is the sum of all fields
+			total = sum(values)
+			// Idle time is the 4th field
+			idle = values[3]
+			break
 		}
 	}
 
-	return "CPU usage not found", nil
+	return idle, total
+}
+
+// Helper function to sum integer slices
+func sum(nums []int64) int64 {
+	var total int64
+	for _, num := range nums {
+		total += num
+	}
+	return total
 }
 
 // 3. Monitor Memory usage.
@@ -88,10 +125,10 @@ func main() {
 	fmt.Println("CPU Temperature:", temp)
 
 	// Get CPU usage
-	cpuUsage, err := getCPUUsage()
+	cpuUsage, err := getAverageCPUUsage(5, 1*time.Second) // 5 samples over 5 seconds
 	if err != nil {
-		fmt.Println("Error retrieving CPU usage:", err)
-	} else {
-		fmt.Println("CPU Usage:", cpuUsage)
+		fmt.Println("Error:", err)
+		return
 	}
+	fmt.Println(cpuUsage)
 }
