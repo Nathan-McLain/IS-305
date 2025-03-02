@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -26,6 +28,25 @@ func getCPUTemperature() (string, error) {
 
 // 2. Monitor CPU usage.
 //    - Extract CPU usage from the `top` command.
+
+// Function to get CPU usage
+func getCPUUsage() (string, error) {
+	cmd := exec.Command("top", "-bn1") // Run `top` in batch mode for one iteration
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(output))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "Cpu(s):") {
+			return strings.TrimSpace(line), nil
+		}
+	}
+
+	return "CPU usage not found", nil
+}
 
 // 3. Monitor Memory usage.
 //    - Use `free -m` to check memory availability and calculate usage percentage.
@@ -56,4 +77,12 @@ func main() {
 	}
 
 	fmt.Println("CPU Temperature:", temp)
+
+	// Get CPU usage
+	cpuUsage, err := getCPUUsage()
+	if err != nil {
+		fmt.Println("Error retrieving CPU usage:", err)
+	} else {
+		fmt.Println("CPU Usage:", cpuUsage)
+	}
 }
