@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -31,7 +32,7 @@ func getCPUTemperature() (string, error) {
 
 // Function to get CPU usage
 func getCPUUsage() (string, error) {
-	cmd := exec.Command("top", "-bn1") // Run `top` in batch mode for one iteration
+	cmd := exec.Command("top", "-bn1")
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -40,8 +41,16 @@ func getCPUUsage() (string, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(output))
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, "Cpu(s):") {
-			return strings.TrimSpace(line), nil
+		if strings.Contains(line, "Cpu(s): ") {
+			// Example output: "%Cpu(s):  0.0 us,  0.0 sy,  0.0 ni,100.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st"
+			fields := strings.Fields(line)
+
+			// Extract user (%) and system (%) CPU usage
+			userUsage, _ := strconv.ParseFloat(strings.TrimSuffix(fields[1], "us,"), 64)
+			systemUsage, _ := strconv.ParseFloat(strings.TrimSuffix(fields[3], "sy,"), 64)
+
+			totalUsage := userUsage + systemUsage
+			return fmt.Sprintf("CPU Usage: %.2f%%", totalUsage), nil
 		}
 	}
 
