@@ -124,6 +124,36 @@ func getMemoryUsage() (string, error) {
 // 4. Monitor Disk Utilization.
 //    - Use `df -h` to check available disk space.
 
+func getDiskUsage() (string, error) {
+	// Run the `df -h /` command to get disk usage for the root partition
+	cmd := exec.Command("df", "-h", "/")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	// Split the output into lines
+	lines := strings.Split(string(output), "\n")
+	if len(lines) < 2 {
+		return "", fmt.Errorf("unexpected output format")
+	}
+
+	// Extract values from the second line (root partition info)
+	fields := strings.Fields(lines[1])
+	if len(fields) < 5 {
+		return "", fmt.Errorf("could not parse disk usage")
+	}
+
+	// Extract total, used, available, and usage percentage
+	total := fields[1]     // Total disk size
+	used := fields[2]      // Used space
+	available := fields[3] // Available space
+	usage := fields[4]     // Percentage used
+
+	// Return formatted disk usage information
+	return fmt.Sprintf("Disk Usage: %s used / %s total (%s available, %s used)", used, total, available, usage), nil
+}
+
 // 5. Display results in a formatted output.
 //    - Print the values in a human-readable format.
 
@@ -163,4 +193,12 @@ func main() {
 	} else {
 		fmt.Println(memUsage)
 	}
+
+	// Get and print disk usage
+	diskUsage, err := getDiskUsage()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(diskUsage)
 }
