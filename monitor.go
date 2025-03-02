@@ -29,7 +29,7 @@ func getCPUTemperature() (string, error) {
 }
 
 // 2. Monitor CPU usage.
-//    - Extract CPU usage from the `top` command.
+//    - Extract CPU usage using mpstat
 
 // Function to calculate CPU usage over multiple samples
 func getAverageCPUUsage(samples int, interval time.Duration) (string, error) {
@@ -97,6 +97,30 @@ func sum(nums []int64) int64 {
 // 3. Monitor Memory usage.
 //    - Use `free -m` to check memory availability and calculate usage percentage.
 
+func getMemoryUsage() (string, error) {
+	cmd := exec.Command("free", "-m")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	lines := strings.Split(string(output), "\n")
+	if len(lines) < 2 {
+		return "Memory usage not found", nil
+	}
+
+	fields := strings.Fields(lines[1]) // Extract memory values from the second line
+	if len(fields) < 3 {
+		return "Memory usage not found", nil
+	}
+
+	totalMem, _ := strconv.Atoi(fields[1])
+	usedMem, _ := strconv.Atoi(fields[2])
+	memUsagePercent := (float64(usedMem) / float64(totalMem)) * 100
+
+	return fmt.Sprintf("Memory Usage: %dMB / %dMB (%.2f%%)", usedMem, totalMem, memUsagePercent), nil
+}
+
 // 4. Monitor Disk Utilization.
 //    - Use `df -h` to check available disk space.
 
@@ -131,4 +155,12 @@ func main() {
 		return
 	}
 	fmt.Println(cpuUsage)
+
+	// Get Memory usage
+	memUsage, err := getMemoryUsage()
+	if err != nil {
+		fmt.Println("Error retrieving Memory usage:", err)
+	} else {
+		fmt.Println(memUsage)
+	}
 }
