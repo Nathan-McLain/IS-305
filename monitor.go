@@ -12,19 +12,34 @@ import (
 
 // This script will monitor system metrics such as CPU temperature, memory usage, and disk utilization.
 
+// Thresholds
+const (
+	CPU_TEMP_THRESHOLD     = 80.0 // 80°C
+	MEMORY_USAGE_THRESHOLD = 80.0 // 80%
+	DISK_USAGE_THRESHOLD   = 80.0 // 80%
+)
+
 // 1. Retrieve CPU Temperature.
 //    - Use `vcgencmd measure_temp` to get the Raspberry Pi’s CPU temperature.
 
-func getCPUTemperature() (string, error) {
-	// Execute the command to get the CPU temperature
+func getCPUTemperature() (float64, error) {
 	cmd := exec.Command("vcgencmd", "measure_temp")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
-	// Convert output to a string and clean it up
-	temp := strings.TrimSpace(string(output))
+	// Example output: "temp=45.6'C"
+	tempStr := strings.TrimSpace(string(output))
+	tempStr = strings.TrimPrefix(tempStr, "temp=") // Remove "temp="
+	tempStr = strings.TrimSuffix(tempStr, "'C")    // Remove "'C"
+
+	// Convert to float
+	temp, err := strconv.ParseFloat(tempStr, 64)
+	if err != nil {
+		return 0, err
+	}
+
 	return temp, nil
 }
 
@@ -169,36 +184,58 @@ func getDiskUsage() (string, error) {
 //    - Run this script on a schedule using a cron job.
 
 func main() {
-	// Retrieve and display CPU temperature
+	// CPU Temperature Check
 	temp, err := getCPUTemperature()
 	if err != nil {
 		fmt.Println("Error retrieving CPU temperature:", err)
-		return
+	} else {
+		fmt.Printf("CPU Temperature: %.2f°C\n", temp)
+		if temp >= CPU_TEMP_THRESHOLD {
+			fmt.Println("WARNING: CPU temperature is too high!")
+		}
 	}
 
-	fmt.Println("CPU Temperature:", temp)
-
-	// Get CPU usage
-	cpuUsage, err := getAverageCPUUsage(5, 1*time.Second) // 5 samples over 5 seconds
+	// CPU Usage Check
+	cpuUsage, err := getAverageCPUUsage(5, 1*time.Second)
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		fmt.Println("Error retrieving CPU usage:", err)
+	} else {
+		fmt.Println(cpuUsage)
 	}
-	fmt.Println(cpuUsage)
 
-	// Get Memory usage
+	// Memory Usage Check
 	memUsage, err := getMemoryUsage()
 	if err != nil {
 		fmt.Println("Error retrieving Memory usage:", err)
 	} else {
 		fmt.Println(memUsage)
+
+		// Extract percentage value from memory usage string
+		memParts := strings.Fields(memUsage)
+		if len(memParts) > 3 {
+			percentStr := strings.TrimSuffix(memParts[3], "%")
+			memPercent, err := strconv.ParseFloat(percentStr, 64)
+			if err == nil && memPercent >= MEMORY_USAGE_THRESHOLD {
+				fmt.Println("WARNING: Memory usage is too high!")
+			}
+		}
 	}
 
-	// Get and print disk usage
+	// Disk Usage Check
 	diskUsage, err := getDiskUsage()
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		fmt.Println("Error retrieving Disk usage:", err)
+	} else {
+		fmt.Println(diskUsage)
+
+		// Extract percentage value from disk usage string
+		diskParts := strings.Fields(diskUsage)
+		if len(diskParts) > 3 {
+			percentStr := strings.TrimSuffix(diskParts[3], "%")
+			diskPercent, err := strconv.ParseFloat(percentStr, 64)
+			if err == nil && diskPercent >= DISK_USAGE_THRESHOLD {
+				fmt.Println("WARNING: Disk usage is too high!")
+			}
+		}
 	}
-	fmt.Println(diskUsage)
 }
