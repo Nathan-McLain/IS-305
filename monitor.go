@@ -16,7 +16,7 @@ import (
 const (
 	CPU_TEMP_THRESHOLD     = 45.0 // 80°C
 	MEMORY_USAGE_THRESHOLD = 9.0  // 80%
-	DISK_USAGE_THRESHOLD   = 10.0 // 80%
+	DISK_USAGE_THRESHOLD   = 8.0  // 80%
 )
 
 // 1. Retrieve CPU Temperature.
