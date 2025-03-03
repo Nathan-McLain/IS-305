@@ -137,10 +137,10 @@ func getMemoryUsage() (float64, int, int, error) {
 }
 
 // 4. Monitor Disk Utilization.
-//    - Use `df -h` to check available disk space.
+//    - Use `df -k` to check available disk space in KB.
 
-func getDiskUsage() (float64, int, int, error) {
-	cmd := exec.Command("df", "--output=pcent,size", "/")
+func getDiskUsage() (float64, float64, float64, error) {
+	cmd := exec.Command("df", "-k", "/")
 	output, err := cmd.Output()
 	if err != nil {
 		return 0, 0, 0, err
@@ -152,16 +152,11 @@ func getDiskUsage() (float64, int, int, error) {
 	}
 
 	fields := strings.Fields(lines[1])
-	percentStr := strings.TrimSuffix(fields[0], "%")
-	diskPercent, err := strconv.ParseFloat(percentStr, 64)
-	if err != nil {
-		return 0, 0, 0, err
-	}
+	totalDisk, _ := strconv.ParseFloat(fields[1], 64)
+	usedDisk, _ := strconv.ParseFloat(fields[2], 64)
 
-	totalDisk, _ := strconv.Atoi(fields[1])
-	usedDisk := int(diskPercent / 100 * float64(totalDisk))
-
-	return diskPercent, usedDisk, totalDisk, nil
+	diskPercent := (usedDisk / totalDisk) * 100
+	return diskPercent, usedDisk / 1024 / 1024, totalDisk / 1024 / 1024, nil
 }
 
 // 6. Set up warnings if thresholds are exceeded.
@@ -207,7 +202,7 @@ func main() {
 	if err != nil {
 		fmt.Println("Error retrieving Disk usage:", err)
 	} else {
-		fmt.Printf("Disk Usage: %.2f%% (%dGB / %dGB)\n", diskUsage, usedDisk, totalDisk)
+		fmt.Printf("Disk Usage: %.2f%% (%.2fGB / %.2fGB)\n", diskUsage, usedDisk, totalDisk)
 		if diskUsage >= DISK_USAGE_THRESHOLD {
 			fmt.Println("WARNING: Disk usage is too high!")
 		}
