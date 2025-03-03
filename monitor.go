@@ -112,65 +112,53 @@ func sum(nums []int64) int64 {
 // 3. Monitor Memory usage.
 //    - Use `free -m` to check memory availability and calculate usage percentage.
 
-func getMemoryUsage() (string, error) {
+func getMemoryUsage() (float64, error) {
 	cmd := exec.Command("free", "-m")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
 	lines := strings.Split(string(output), "\n")
 	if len(lines) < 2 {
-		return "Memory usage not found", nil
+		return 0, fmt.Errorf("memory usage not found")
 	}
 
 	fields := strings.Fields(lines[1]) // Extract memory values from the second line
 	if len(fields) < 3 {
-		return "Memory usage not found", nil
+		return 0, fmt.Errorf("memory usage not found")
 	}
 
 	totalMem, _ := strconv.Atoi(fields[1])
 	usedMem, _ := strconv.Atoi(fields[2])
 	memUsagePercent := (float64(usedMem) / float64(totalMem)) * 100
 
-	return fmt.Sprintf("Memory Usage: %dMB / %dMB (%.2f%%)", usedMem, totalMem, memUsagePercent), nil
+	return memUsagePercent, nil
 }
 
 // 4. Monitor Disk Utilization.
 //    - Use `df -h` to check available disk space.
 
-func getDiskUsage() (string, error) {
-	// Run the `df -h /` command to get disk usage for the root partition
-	cmd := exec.Command("df", "-h", "/")
+func getDiskUsage() (float64, error) {
+	cmd := exec.Command("df", "--output=pcent", "/")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
-	// Split the output into lines
 	lines := strings.Split(string(output), "\n")
 	if len(lines) < 2 {
-		return "", fmt.Errorf("unexpected output format")
+		return 0, fmt.Errorf("unexpected output format")
 	}
 
-	// Extract values from the second line (root partition info)
-	fields := strings.Fields(lines[1])
-	if len(fields) < 5 {
-		return "", fmt.Errorf("could not parse disk usage")
+	percentStr := strings.TrimSpace(strings.TrimSuffix(lines[1], "%"))
+	diskPercent, err := strconv.ParseFloat(percentStr, 64)
+	if err != nil {
+		return 0, err
 	}
 
-	// Extract total, used, available, and usage percentage
-	total := fields[1]     // Total disk size
-	used := fields[2]      // Used space
-	available := fields[3] // Available space
-	usage := fields[4]     // Percentage used
-
-	// Return formatted disk usage information
-	return fmt.Sprintf("Disk Usage: %s used / %s total (%s available, %s used)", used, total, available, usage), nil
+	return diskPercent, nil
 }
-
-// 5. Display results in a formatted output.
-//    - Print the values in a human-readable format.
 
 // 6. Set up warnings if thresholds are exceeded.
 //    - Alert if CPU temp is too high.
@@ -184,7 +172,6 @@ func getDiskUsage() (string, error) {
 //    - Run this script on a schedule using a cron job.
 
 func main() {
-	// CPU Temperature Check
 	temp, err := getCPUTemperature()
 	if err != nil {
 		fmt.Println("Error retrieving CPU temperature:", err)
@@ -195,7 +182,6 @@ func main() {
 		}
 	}
 
-	// CPU Usage Check
 	cpuUsage, err := getAverageCPUUsage(5, 1*time.Second)
 	if err != nil {
 		fmt.Println("Error retrieving CPU usage:", err)
@@ -203,39 +189,23 @@ func main() {
 		fmt.Println(cpuUsage)
 	}
 
-	// Memory Usage Check
 	memUsage, err := getMemoryUsage()
 	if err != nil {
 		fmt.Println("Error retrieving Memory usage:", err)
 	} else {
-		fmt.Println(memUsage)
-
-		// Extract percentage value from memory usage string
-		memParts := strings.Fields(memUsage)
-		if len(memParts) > 3 {
-			percentStr := strings.TrimSuffix(memParts[3], "%")
-			memPercent, err := strconv.ParseFloat(percentStr, 64)
-			if err == nil && memPercent >= MEMORY_USAGE_THRESHOLD {
-				fmt.Println("WARNING: Memory usage is too high!")
-			}
+		fmt.Printf("Memory Usage: %.2f%%\n", memUsage)
+		if memUsage >= MEMORY_USAGE_THRESHOLD {
+			fmt.Println("WARNING: Memory usage is too high!")
 		}
 	}
 
-	// Disk Usage Check
 	diskUsage, err := getDiskUsage()
 	if err != nil {
 		fmt.Println("Error retrieving Disk usage:", err)
 	} else {
-		fmt.Println(diskUsage)
-
-		// Extract percentage value from disk usage string
-		diskParts := strings.Fields(diskUsage)
-		if len(diskParts) > 3 {
-			percentStr := strings.TrimSuffix(diskParts[3], "%")
-			diskPercent, err := strconv.ParseFloat(percentStr, 64)
-			if err == nil && diskPercent >= DISK_USAGE_THRESHOLD {
-				fmt.Println("WARNING: Disk usage is too high!")
-			}
+		fmt.Printf("Disk Usage: %.2f%%\n", diskUsage)
+		if diskUsage >= DISK_USAGE_THRESHOLD {
+			fmt.Println("WARNING: Disk usage is too high!")
 		}
 	}
 }
