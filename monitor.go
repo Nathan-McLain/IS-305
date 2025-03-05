@@ -14,7 +14,7 @@ import (
 
 // Thresholds
 const (
-	CPU_TEMP_THRESHOLD     = 70.0 // 70°C
+	CPU_TEMP_THRESHOLD     = 10.0 // 70°C
 	MEMORY_USAGE_THRESHOLD = 80.0 // 80%
 	DISK_USAGE_THRESHOLD   = 80.0 // 80%
 )
