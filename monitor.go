@@ -14,10 +14,32 @@ import (
 
 // Thresholds
 const (
-	CPU_TEMP_THRESHOLD     = 45.0 // 80°C
-	MEMORY_USAGE_THRESHOLD = 9.0  // 80%
-	DISK_USAGE_THRESHOLD   = 8.0  // 80%
+	CPU_TEMP_THRESHOLD     = 10.0 // 70°C
+	MEMORY_USAGE_THRESHOLD = 10.0 // 80%
+	DISK_USAGE_THRESHOLD   = 5.0  // 80%
 )
+
+// Email recipient
+const recipient = "nate.mclain5@gmail.com"
+
+// Send Email function
+func sendEmail(subject, body string) error {
+	tempFile, err := os.CreateTemp("", "alert_email_*.txt")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tempFile.Name())
+
+	msg := fmt.Sprintf("Subject: %s\n\n%s", subject, body)
+	if _, err := tempFile.WriteString(msg); err != nil {
+		return err
+	}
+	tempFile.Close()
+
+	cmd := exec.Command("msmtp", recipient)
+	cmd.Stdin, _ = os.Open(tempFile.Name())
+	return cmd.Run()
+}
 
 // 1. Retrieve CPU Temperature.
 //    - Use `vcgencmd measure_temp` to get the Raspberry Pi’s CPU temperature.
@@ -171,13 +193,17 @@ func getDiskUsage() (float64, float64, float64, error) {
 //    - Run this script on a schedule using a cron job.
 
 func main() {
+	var alerts []string
+
 	temp, err := getCPUTemperature()
 	if err != nil {
 		fmt.Println("Error retrieving CPU temperature:", err)
 	} else {
 		fmt.Printf("CPU Temperature: %.2f°C\n", temp)
 		if temp >= CPU_TEMP_THRESHOLD {
-			fmt.Println("WARNING: CPU temperature is too high!")
+			alert := fmt.Sprintf("WARNING: CPU temperature is too high! CPU Temperature is %.2f°C, which exceeds the threshold of %.2f°C.", temp, CPU_TEMP_THRESHOLD)
+			fmt.Println(alert)
+			alerts = append(alerts, alert)
 		}
 	}
 
@@ -194,7 +220,9 @@ func main() {
 	} else {
 		fmt.Printf("Memory Usage: %.2f%% (%dMB / %dMB)\n", memUsage, usedMem, totalMem)
 		if memUsage >= MEMORY_USAGE_THRESHOLD {
-			fmt.Println("WARNING: Memory usage is too high!")
+			alert := fmt.Sprintf("WARNING: Memory usage is too high! Memory Usage is %.2f%% (%dMB / %dMB), which exceeds the threshold of %.2f%%.", memUsage, usedMem, totalMem, MEMORY_USAGE_THRESHOLD)
+			fmt.Println(alert)
+			alerts = append(alerts, alert)
 		}
 	}
 
@@ -204,7 +232,15 @@ func main() {
 	} else {
 		fmt.Printf("Disk Usage: %.2f%% (%.2fGB / %.2fGB)\n", diskUsage, usedDisk, totalDisk)
 		if diskUsage >= DISK_USAGE_THRESHOLD {
-			fmt.Println("WARNING: Disk usage is too high!")
+			alert := fmt.Sprintf("WARNING: Disk usage is too high! Disk Usage is %.2f%% (%.2fGB / %.2fGB), which exceeds the threshold of %.2f%%.", diskUsage, usedDisk, totalDisk, DISK_USAGE_THRESHOLD)
+			fmt.Println(alert)
+			alerts = append(alerts, alert)
 		}
+	}
+
+	if len(alerts) > 0 {
+		subject := "System Monitoring Alerts"
+		body := strings.Join(alerts, "\n")
+		sendEmail(subject, body)
 	}
 }
