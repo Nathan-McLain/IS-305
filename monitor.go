@@ -14,9 +14,9 @@ import (
 
 // Thresholds
 const (
-	CPU_TEMP_THRESHOLD     = 10.0 // 70°C
-	MEMORY_USAGE_THRESHOLD = 10.0 // 80%
-	DISK_USAGE_THRESHOLD   = 5.0  // 80%
+	CPU_TEMP_THRESHOLD     = 20.0 // 70°C
+	MEMORY_USAGE_THRESHOLD = 1.0  // 80%
+	DISK_USAGE_THRESHOLD   = 2.0  // 80%
 )
 
 // Email recipient
@@ -239,8 +239,8 @@ func main() {
 	}
 
 	if len(alerts) > 0 {
-		subject := "System Monitoring Alerts"
-		body := strings.Join(alerts, "\n")
+		subject := "System Monitoring Alerts from Raspberry Pi"
+		body := strings.Join(alerts, "\n\n")
 		sendEmail(subject, body)
 	}
 }
