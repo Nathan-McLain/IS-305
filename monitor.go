@@ -20,7 +20,7 @@ const (
 )
 
 // Email recipient
-var recipient = os.Getenv("EMAIL_RECIPIENT") // now masks the email address
+var recipient = os.Getenv("EMAIL_RECIPIENT") // changed to mask the email address
 
 // Send Email function
 func sendEmail(subject, body string) error {
